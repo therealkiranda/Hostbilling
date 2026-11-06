@@ -1,10 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import argon2 from 'argon2';
-import type {
-  FastifyPluginAsync,
-  FastifyReply,
-  preHandlerHookHandler,
-} from 'fastify';
+import type { FastifyPluginAsync, FastifyReply, preHandlerHookHandler } from 'fastify';
 import type { PrismaClient } from '@hostbilling/database';
 import { z } from 'zod';
 
@@ -57,13 +53,23 @@ const registerSchema = z.object({
     .min(3)
     .max(48)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-  email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
+  email: z
+    .string()
+    .trim()
+    .email()
+    .max(254)
+    .transform((value) => value.toLowerCase()),
   password: z.string().min(12).max(128),
   name: z.string().trim().min(1).max(120).optional(),
 });
 
 const loginSchema = z.object({
-  email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
+  email: z
+    .string()
+    .trim()
+    .email()
+    .max(254)
+    .transform((value) => value.toLowerCase()),
   password: z.string().min(1).max(128),
 });
 
@@ -71,8 +77,7 @@ const refreshSchema = z.object({
   refreshToken: z.string().min(40).max(200),
 });
 
-const sha256 = (value: string): string =>
-  createHash('sha256').update(value).digest('hex');
+const sha256 = (value: string): string => createHash('sha256').update(value).digest('hex');
 
 const createRefreshToken = (): string => randomBytes(48).toString('base64url');
 
@@ -83,12 +88,7 @@ const sessionExpiry = (): Date => {
 };
 
 function isUniqueConstraintError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    error.code === 'P2002'
-  );
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002';
 }
 
 async function issueTokens(
@@ -210,9 +210,7 @@ export function requireTenant(db: PrismaClient): preHandlerHookHandler {
   };
 }
 
-export function requireTenantRole(
-  ...allowedRoles: MembershipRole[]
-): preHandlerHookHandler {
+export function requireTenantRole(...allowedRoles: MembershipRole[]): preHandlerHookHandler {
   return async (request, reply) => {
     if (!request.tenantContext) {
       return reply.code(403).send({ error: 'Tenant context is required' });
@@ -228,118 +226,126 @@ export const authRoutes: FastifyPluginAsync<AuthPluginOptions> = async (app, { d
   const authenticateUser = authenticate(db);
   const resolveTenant = requireTenant(db);
 
-  app.post('/auth/register', {
-    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
-  }, async (request, reply) => {
-    const parsed = registerSchema.safeParse(request.body);
+  app.post(
+    '/auth/register',
+    {
+      config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
+    },
+    async (request, reply) => {
+      const parsed = registerSchema.safeParse(request.body);
 
-    if (!parsed.success) {
-      return reply.code(400).send({
-        error: 'Invalid registration details',
-        details: parsed.error.flatten().fieldErrors,
-      });
-    }
-
-    const input = parsed.data;
-
-    try {
-      const created = await db.$transaction(async (transaction) => {
-        const user = await transaction.user.create({
-          data: {
-            email: input.email,
-            passwordHash: await argon2.hash(input.password, {
-              type: argon2.argon2id,
-            }),
-            ...(input.name ? { name: input.name } : {}),
-          },
-          select: { id: true, email: true, name: true },
-        });
-
-        const tenant = await transaction.tenant.create({
-          data: {
-            name: input.organizationName,
-            slug: input.tenantSlug,
-          },
-          select: { id: true, name: true, slug: true },
-        });
-
-        const membership = await transaction.tenantMembership.create({
-          data: {
-            tenantId: tenant.id,
-            userId: user.id,
-            role: 'OWNER',
-          },
-          select: { role: true },
-        });
-
-        return { user, tenant, role: membership.role };
-      });
-
-      const tokens = await issueTokens(db, reply, created.user.id);
-
-      return reply.code(201).send({
-        user: created.user,
-        tenant: { ...created.tenant, role: created.role },
-        tokens,
-      });
-    } catch (error) {
-      if (isUniqueConstraintError(error)) {
-        return reply.code(409).send({
-          error: 'The email address or tenant slug is already in use',
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: 'Invalid registration details',
+          details: parsed.error.flatten().fieldErrors,
         });
       }
 
-      throw error;
-    }
-  });
+      const input = parsed.data;
 
-  app.post('/auth/login', {
-    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
-  }, async (request, reply) => {
-    const parsed = loginSchema.safeParse(request.body);
+      try {
+        const created = await db.$transaction(async (transaction) => {
+          const user = await transaction.user.create({
+            data: {
+              email: input.email,
+              passwordHash: await argon2.hash(input.password, {
+                type: argon2.argon2id,
+              }),
+              ...(input.name ? { name: input.name } : {}),
+            },
+            select: { id: true, email: true, name: true },
+          });
 
-    if (!parsed.success) {
-      return reply.code(400).send({ error: 'Invalid login details' });
-    }
+          const tenant = await transaction.tenant.create({
+            data: {
+              name: input.organizationName,
+              slug: input.tenantSlug,
+            },
+            select: { id: true, name: true, slug: true },
+          });
 
-    const user = await db.user.findUnique({
-      where: { email: parsed.data.email },
-      include: {
-        memberships: {
-          include: {
-            tenant: {
-              select: { id: true, name: true, slug: true, status: true },
+          const membership = await transaction.tenantMembership.create({
+            data: {
+              tenantId: tenant.id,
+              userId: user.id,
+              role: 'OWNER',
+            },
+            select: { role: true },
+          });
+
+          return { user, tenant, role: membership.role };
+        });
+
+        const tokens = await issueTokens(db, reply, created.user.id);
+
+        return reply.code(201).send({
+          user: created.user,
+          tenant: { ...created.tenant, role: created.role },
+          tokens,
+        });
+      } catch (error) {
+        if (isUniqueConstraintError(error)) {
+          return reply.code(409).send({
+            error: 'The email address or tenant slug is already in use',
+          });
+        }
+
+        throw error;
+      }
+    },
+  );
+
+  app.post(
+    '/auth/login',
+    {
+      config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
+    },
+    async (request, reply) => {
+      const parsed = loginSchema.safeParse(request.body);
+
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'Invalid login details' });
+      }
+
+      const user = await db.user.findUnique({
+        where: { email: parsed.data.email },
+        include: {
+          memberships: {
+            include: {
+              tenant: {
+                select: { id: true, name: true, slug: true, status: true },
+              },
             },
           },
         },
-      },
-    });
+      });
 
-    if (
-      !user ||
-      user.status !== 'ACTIVE' ||
-      !(await argon2.verify(user.passwordHash, parsed.data.password))
-    ) {
-      return reply.code(401).send({ error: 'Invalid email or password' });
-    }
+      if (
+        !user ||
+        user.status !== 'ACTIVE' ||
+        !(await argon2.verify(user.passwordHash, parsed.data.password))
+      ) {
+        return reply.code(401).send({ error: 'Invalid email or password' });
+      }
 
-    const memberships = user.memberships
-      .filter((membership) => membership.tenant.status === 'ACTIVE')
-      .map((membership) => ({
-        id: membership.tenant.id,
-        name: membership.tenant.name,
-        slug: membership.tenant.slug,
-        role: membership.role,
-      }));
+      const memberships = user.memberships
+        .filter((membership) => membership.tenant.status === 'ACTIVE')
+        .map((membership) => ({
+          id: membership.tenant.id,
+          name: membership.tenant.name,
+          slug: membership.tenant.slug,
+          role: membership.role,
+        }));
 
-    const tokens = await issueTokens(db, reply, user.id);
+      const tokens = await issueTokens(db, reply, user.id);
 
-    return reply.send({
-      user: { id: user.id, email: user.email, name: user.name },
-      tenants: memberships,
-      tokens,
-    });
-  });
+      return reply.send({
+        user: { id: user.id, email: user.email, name: user.name },
+        tenants: memberships,
+        tokens,
+      });
+    },
+  );
 
   app.post('/auth/refresh', async (request, reply) => {
     const parsed = refreshSchema.safeParse(request.body);
