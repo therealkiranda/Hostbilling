@@ -13,6 +13,8 @@ jobs:
   quality:
     name: Lint, typecheck, test, and build
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://hostbilling:hostbilling@localhost:5432/hostbilling?schema=public
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -29,6 +31,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
+
+      - name: Validate database schema
+        run: pnpm db:validate
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
 
       - name: Run lint and formatting checks
         run: pnpm check
