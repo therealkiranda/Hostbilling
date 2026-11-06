@@ -133,40 +133,42 @@ async function issueTokens(
 
 export function authenticate(db: PrismaClient): preHandlerHookHandler {
   return async (request, reply) => {
+    let payload: AuthTokenPayload;
+
     try {
-      const payload = await request.jwtVerify<AuthTokenPayload>();
-
-      if (!payload.sub || !payload.sid) {
-        return reply.code(401).send({ error: 'Unauthorized' });
-      }
-
-      const [session, user] = await Promise.all([
-        db.authSession.findFirst({
-          where: {
-            id: payload.sid,
-            userId: payload.sub,
-            revokedAt: null,
-            expiresAt: { gt: new Date() },
-          },
-          select: { id: true },
-        }),
-        db.user.findFirst({
-          where: { id: payload.sub, status: 'ACTIVE' },
-          select: { id: true },
-        }),
-      ]);
-
-      if (!session || !user) {
-        return reply.code(401).send({ error: 'Unauthorized' });
-      }
-
-      request.authContext = {
-        userId: user.id,
-        sessionId: session.id,
-      };
+      payload = await request.jwtVerify<AuthTokenPayload>();
     } catch {
       return reply.code(401).send({ error: 'Unauthorized' });
     }
+
+    if (!payload.sub || !payload.sid) {
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
+
+    const [session, user] = await Promise.all([
+      db.authSession.findFirst({
+        where: {
+          id: payload.sid,
+          userId: payload.sub,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+        select: { id: true },
+      }),
+      db.user.findFirst({
+        where: { id: payload.sub, status: 'ACTIVE' },
+        select: { id: true },
+      }),
+    ]);
+
+    if (!session || !user) {
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
+
+    request.authContext = {
+      userId: user.id,
+      sessionId: session.id,
+    };
   };
 }
 
@@ -178,7 +180,7 @@ export function requireTenant(db: PrismaClient): preHandlerHookHandler {
 
     const tenantId = request.headers['x-tenant-id'];
 
-    if (typeof tenantId !== 'string') {
+    if (typeof tenantId !== 'string' || !z.string().uuid().safeParse(tenantId).success) {
       return reply.code(400).send({ error: 'A valid x-tenant-id header is required' });
     }
 
