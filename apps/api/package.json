@@ -12,7 +12,12 @@
     "typecheck": "tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
-    "fastify": "^5.2.0"
+    "@fastify/jwt": "^9.1.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "@hostbilling/database": "workspace:*",
+    "argon2": "^0.44.0",
+    "fastify": "^5.2.0",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
