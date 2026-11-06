@@ -37,6 +37,18 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm db:generate
 
+      - name: Inspect Prettier output for stacked authentication PR
+        run: |
+          git fetch origin feat/tenant-auth-clean
+          git checkout FETCH_HEAD -- apps/api/src/app.ts apps/api/src/auth.ts docs/authentication.md
+          pnpm exec prettier --write apps/api/src/app.ts apps/api/src/auth.ts docs/authentication.md
+          echo '--- FORMATTED APP ---'
+          cat apps/api/src/app.ts
+          echo '--- FORMATTED AUTH ---'
+          cat apps/api/src/auth.ts
+          echo '--- FORMATTED DOCS ---'
+          cat docs/authentication.md
+
       - name: Run lint and formatting checks
         run: pnpm check
 
