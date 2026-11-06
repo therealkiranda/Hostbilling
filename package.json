@@ -12,7 +12,11 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm lint && pnpm format:check"
+    "check": "pnpm lint && pnpm format:check",
+    "dev:api": "pnpm --filter @hostbilling/api dev",
+    "build": "pnpm --filter @hostbilling/api build",
+    "test": "pnpm --filter @hostbilling/api test",
+    "typecheck": "pnpm --filter @hostbilling/api typecheck"
   },
   "devDependencies": {
     "eslint": "^9.25.1",
