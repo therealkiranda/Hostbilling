@@ -3,8 +3,6 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance } from 'fastify';
 import {
   authRoutes,
-  authenticate,
-  requireTenant,
   requireTenantRole,
 } from './auth.js';
 import { createDatabaseClient, type PrismaClient } from '@hostbilling/database';
@@ -43,14 +41,6 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     status: 'ok',
     service: 'hostbilling-api',
   }));
-
-  app.get(
-    '/tenant/context',
-    {
-      preHandler: [authenticate(db), requireTenant(db)],
-    },
-    async (request) => ({ tenant: request.tenantContext }),
-  );
 
   app.addHook('onClose', async () => {
     if (ownsDatabase) {
