@@ -21,6 +21,7 @@
     "db:validate": "pnpm --filter @hostbilling/database db:validate",
     "db:migrate:dev": "pnpm --filter @hostbilling/database db:migrate:dev",
     "db:migrate:deploy": "pnpm --filter @hostbilling/database db:migrate:deploy",
+    "db:migrate:status": "pnpm --filter @hostbilling/database db:migrate:status",
     "db:studio": "pnpm --filter @hostbilling/database db:studio"
   },
   "devDependencies": {
