@@ -14,15 +14,15 @@ Set the result as `JWT_SECRET`. Never commit a real secret or reuse the example 
 
 ## Endpoints
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| POST | `/auth/register` | Create a user, tenant, OWNER membership, and session |
-| POST | `/auth/login` | Authenticate and return the user's active tenant memberships |
-| POST | `/auth/refresh` | Rotate a refresh token and issue a new access token |
-| POST | `/auth/logout` | Revoke the refresh-token session |
-| GET | `/auth/me` | Return the authenticated user and active memberships |
-| GET | `/auth/tenants` | List the authenticated user's active tenants |
-| GET | `/tenant/context` | Resolve the requested tenant from an active membership |
+| Method | Endpoint          | Purpose                                                      |
+| ------ | ----------------- | ------------------------------------------------------------ |
+| POST   | `/auth/register`  | Create a user, tenant, OWNER membership, and session         |
+| POST   | `/auth/login`     | Authenticate and return the user's active tenant memberships |
+| POST   | `/auth/refresh`   | Rotate a refresh token and issue a new access token          |
+| POST   | `/auth/logout`    | Revoke the refresh-token session                             |
+| GET    | `/auth/me`        | Return the authenticated user and active memberships        |
+| GET    | `/auth/tenants`   | List the authenticated user's active tenants                 |
+| GET    | `/tenant/context` | Resolve the requested tenant from an active membership       |
 
 Registration expects `organizationName`, `tenantSlug`, `email`, and `password`. The optional `name` field is the user's display name. Passwords must contain at least 12 characters. Email addresses are trimmed and lowercased before storage.
 
