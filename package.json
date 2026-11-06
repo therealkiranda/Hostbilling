@@ -16,7 +16,13 @@
     "dev:api": "pnpm --filter @hostbilling/api dev",
     "build": "pnpm --filter @hostbilling/api build",
     "test": "pnpm --filter @hostbilling/api test",
-    "typecheck": "pnpm --filter @hostbilling/api typecheck"
+    "typecheck": "pnpm --filter @hostbilling/api typecheck",
+    "db:generate": "pnpm --filter @hostbilling/database db:generate",
+    "db:validate": "pnpm --filter @hostbilling/database db:validate",
+    "db:migrate:dev": "pnpm --filter @hostbilling/database db:migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @hostbilling/database db:migrate:deploy",
+    "db:migrate:status": "pnpm --filter @hostbilling/database db:migrate:status",
+    "db:studio": "pnpm --filter @hostbilling/database db:studio"
   },
   "devDependencies": {
     "eslint": "^9.25.1",
