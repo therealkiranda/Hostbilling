@@ -30,7 +30,7 @@ CREATE TABLE "TenantMembership" (
     "id" UUID NOT NULL,
     "tenantId" UUID NOT NULL,
     "userId" UUID NOT NULL,
-    "role" "MembershipRole" NOT NULL DEFAULT 'ADMIN',
+    "role" "MembershipRole" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
