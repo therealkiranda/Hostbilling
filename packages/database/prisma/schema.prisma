@@ -54,7 +54,7 @@ model TenantMembership {
   id        String         @id @default(uuid()) @db.Uuid
   tenantId  String         @db.Uuid
   userId    String         @db.Uuid
-  role      MembershipRole @default(ADMIN)
+  role      MembershipRole
   tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   user      User           @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   createdAt DateTime       @default(now())
