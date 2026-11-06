@@ -64,8 +64,7 @@ pnpm db:generate
 pnpm dev:api
 ```
 
-The API listens on port 4000 by default. PostgreSQL setup, migration commands,
-and tenant model decisions are documented in [docs/database.md](docs/database.md).
+The API listens on port 4000 by default. PostgreSQL setup and migration commands are documented in [docs/database.md](docs/database.md). Authentication endpoints, JWT configuration, and tenant authorization are documented in [docs/authentication.md](docs/authentication.md).
 
 ## Development principles
 
