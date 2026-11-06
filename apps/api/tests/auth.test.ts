@@ -38,7 +38,7 @@ describe('tenant authentication', () => {
     const response = await app.inject({
       method: 'GET',
       url: '/tenant/context',
-      headers: { 'x-tenant-id': 'tenant-1' },
+      headers: { 'x-tenant-id': '00000000-0000-4000-8000-000000000001' },
     });
 
     expect(response.statusCode).toBe(401);
@@ -50,7 +50,7 @@ describe('tenant authentication', () => {
     vi.mocked(database.tenantMembership.findFirst).mockResolvedValue({
       role: 'OWNER',
       tenant: {
-        id: 'tenant-1',
+        id: '00000000-0000-4000-8000-000000000001',
         name: 'Example Hosting',
         slug: 'example-hosting',
       },
@@ -66,14 +66,14 @@ describe('tenant authentication', () => {
       url: '/tenant/context',
       headers: {
         authorization: `Bearer ${accessToken}`,
-        'x-tenant-id': 'tenant-1',
+        'x-tenant-id': '00000000-0000-4000-8000-000000000001',
       },
     });
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
       tenant: {
-        tenantId: 'tenant-1',
+        tenantId: '00000000-0000-4000-8000-000000000001',
         name: 'Example Hosting',
         slug: 'example-hosting',
         role: 'OWNER',
@@ -82,7 +82,7 @@ describe('tenant authentication', () => {
     expect(database.tenantMembership.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          tenantId: 'tenant-1',
+          tenantId: '00000000-0000-4000-8000-000000000001',
           userId: 'user-1',
         }),
       }),
@@ -104,7 +104,7 @@ describe('tenant authentication', () => {
       url: '/tenant/context',
       headers: {
         authorization: `Bearer ${accessToken}`,
-        'x-tenant-id': 'tenant-not-owned',
+        'x-tenant-id': '00000000-0000-4000-8000-000000000002',
       },
     });
 
