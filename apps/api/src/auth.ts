@@ -4,7 +4,6 @@ import type {
   FastifyInstance,
   FastifyPluginAsync,
   FastifyReply,
-  FastifyRequest,
   preHandlerHookHandler,
 } from 'fastify';
 import type { PrismaClient } from '@hostbilling/database';
@@ -94,7 +93,6 @@ function isUniqueConstraintError(error: unknown): boolean {
 }
 
 async function issueTokens(
-  app: FastifyInstance,
   db: PrismaClient,
   reply: FastifyReply,
   userId: string,
@@ -251,7 +249,7 @@ export const authRoutes: FastifyPluginAsync<AuthPluginOptions> = async (app, { d
             passwordHash: await argon2.hash(input.password, {
               type: argon2.argon2id,
             }),
-            name: input.name,
+            ...(input.name ? { name: input.name } : {}),
           },
           select: { id: true, email: true, name: true },
         });
@@ -276,7 +274,7 @@ export const authRoutes: FastifyPluginAsync<AuthPluginOptions> = async (app, { d
         return { user, tenant, role: membership.role };
       });
 
-      const tokens = await issueTokens(app, db, reply, created.user.id);
+      const tokens = await issueTokens(db, reply, created.user.id);
 
       return reply.code(201).send({
         user: created.user,
@@ -333,7 +331,7 @@ export const authRoutes: FastifyPluginAsync<AuthPluginOptions> = async (app, { d
         role: membership.role,
       }));
 
-    const tokens = await issueTokens(app, db, reply, user.id);
+    const tokens = await issueTokens(db, reply, user.id);
 
     return reply.send({
       user: { id: user.id, email: user.email, name: user.name },
