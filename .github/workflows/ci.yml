@@ -37,14 +37,6 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm db:generate
 
-      - name: Inspect authentication documentation formatting
-        run: |
-          git fetch origin feat/tenant-auth-final
-          git checkout FETCH_HEAD -- docs/authentication.md
-          pnpm exec prettier --write docs/authentication.md
-          echo '--- FORMATTED DOCS ---'
-          cat docs/authentication.md
-
       - name: Run lint and formatting checks
         run: pnpm check
 
