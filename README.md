@@ -22,19 +22,16 @@ The first release focuses on **shared web hosting**. Customers use domains they 
 
 The architecture is planned as a TypeScript modular monolith with separate web applications and background workers. HostPanel is an integration, not a runtime dependency of the core billing platform.
 
-## Planned technology
+## Technology foundation
 
-The initial technical direction is:
-
-- Node.js and TypeScript
-- React and Vite
-- PostgreSQL and Prisma
-- Redis and BullMQ
-- REST API with OpenAPI documentation
-- Docker Compose for local development and deployment
-- Vitest and Playwright for automated testing
-
-Versions and exact package choices will be pinned when the implementation foundation is added.
+- Node.js 22 and TypeScript
+- pnpm workspaces
+- Fastify REST API
+- PostgreSQL 17
+- Prisma ORM 7 with the PostgreSQL driver adapter
+- React and Vite for the planned web applications
+- Redis and BullMQ for planned background jobs
+- Vitest for API tests
 
 ## Repository layout
 
@@ -45,13 +42,30 @@ apps/
   admin/        Hosting company administration
   portal/       Customer account and service portal
   worker/       Background jobs and scheduled work
-packages/       Shared libraries and domain modules
+packages/
+  database/     PostgreSQL schema, migrations, and Prisma client
 infrastructure/ Local and deployment infrastructure
 docs/           Product, architecture, and developer documentation
 tests/          Cross-application and end-to-end tests
 ```
 
 Directories will be populated incrementally as each milestone is implemented and tested.
+
+## Local development
+
+Requirements: Node.js 22.14+, pnpm 10+, and Docker with Compose.
+
+```sh
+cp .env.example .env
+docker compose up -d postgres
+pnpm install
+pnpm db:validate
+pnpm db:generate
+pnpm dev:api
+```
+
+The API listens on port 4000 by default. PostgreSQL setup, migration commands,
+and tenant model decisions are documented in [docs/database.md](docs/database.md).
 
 ## Development principles
 
