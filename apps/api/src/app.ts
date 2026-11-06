@@ -1,10 +1,7 @@
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance } from 'fastify';
-import {
-  authRoutes,
-  requireTenantRole,
-} from './auth.js';
+import { authRoutes, requireTenantRole } from './auth.js';
 import { createDatabaseClient, type PrismaClient } from '@hostbilling/database';
 
 interface BuildAppOptions {
