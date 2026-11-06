@@ -12,7 +12,9 @@ services:
     volumes:
       - hostbilling-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hostbilling} -d ${POSTGRES_DB:-hostbilling}"]
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-hostbilling} -d ${POSTGRES_DB:-hostbilling}
       interval: 5s
       timeout: 5s
       retries: 10
