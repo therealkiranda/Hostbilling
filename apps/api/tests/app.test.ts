@@ -1,12 +1,16 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
+import type { PrismaClient } from '@hostbilling/database';
 import { buildApp } from '../src/app.js';
 
 describe('GET /health', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
-    app = buildApp();
+    app = buildApp({
+      db: {} as PrismaClient,
+      jwtSecret: 'test-secret-with-at-least-32-random-bytes',
+    });
     await app.ready();
   });
 
