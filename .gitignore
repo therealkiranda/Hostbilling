@@ -9,6 +9,9 @@ coverage/
 .vite/
 .turbo/
 
+# Generated Prisma Client
+packages/database/src/generated/
+
 # Environment and secrets
 .env
 .env.*
