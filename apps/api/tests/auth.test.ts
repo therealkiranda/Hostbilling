@@ -3,6 +3,7 @@ import argon2 from 'argon2';
 import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@hostbilling/database';
 import { buildApp } from '../src/app.js';
+import { authenticate, requireTenant, requireTenantRole } from '../src/auth.js';
 
 const databaseMock = {
   authSession: {
@@ -48,6 +49,17 @@ describe('tenant authentication', () => {
       db: database,
       jwtSecret,
     });
+    app.get(
+      '/tenant/owner-only',
+      {
+        preHandler: [
+          authenticate(database),
+          requireTenant(database),
+          requireTenantRole('OWNER'),
+        ],
+      },
+      async () => ({ ok: true }),
+    );
     await app.ready();
   });
 
@@ -105,6 +117,68 @@ describe('tenant authentication', () => {
         where: expect.objectContaining({ tenantId, userId: 'user-1' }),
       }),
     );
+  });
+
+  it('rejects an inactive user even when the session exists', async () => {
+    databaseMock.authSession.findFirst.mockResolvedValue({ id: 'session-1' });
+    databaseMock.user.findFirst.mockResolvedValue(null);
+
+    const accessToken = app.jwt.sign({ sub: 'user-1', sid: 'session-1' });
+    const response = await app.inject({
+      method: 'GET',
+      url: '/tenant/context',
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        'x-tenant-id': tenantId,
+      },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(databaseMock.tenantMembership.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid tenant header before querying membership', async () => {
+    databaseMock.authSession.findFirst.mockResolvedValue({ id: 'session-1' });
+    databaseMock.user.findFirst.mockResolvedValue({ id: 'user-1' });
+
+    const accessToken = app.jwt.sign({ sub: 'user-1', sid: 'session-1' });
+    const response = await app.inject({
+      method: 'GET',
+      url: '/tenant/context',
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        'x-tenant-id': 'not-a-uuid',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(databaseMock.tenantMembership.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('denies a BILLING member from an OWNER-only route', async () => {
+    databaseMock.authSession.findFirst.mockResolvedValue({ id: 'session-1' });
+    databaseMock.user.findFirst.mockResolvedValue({ id: 'user-1' });
+    databaseMock.tenantMembership.findFirst.mockResolvedValue({
+      role: 'BILLING',
+      tenant: {
+        id: tenantId,
+        name: 'Example Hosting',
+        slug: 'example-hosting',
+      },
+    });
+
+    const accessToken = app.jwt.sign({ sub: 'user-1', sid: 'session-1' });
+    const response = await app.inject({
+      method: 'GET',
+      url: '/tenant/owner-only',
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        'x-tenant-id': tenantId,
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().error).toBe('Insufficient tenant permissions');
   });
 
   it('denies a user who is not a member of the requested tenant', async () => {
