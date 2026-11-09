@@ -52,11 +52,7 @@ describe('tenant authentication', () => {
     app.get(
       '/tenant/owner-only',
       {
-        preHandler: [
-          authenticate(database),
-          requireTenant(database),
-          requireTenantRole('OWNER'),
-        ],
+        preHandler: [authenticate(database), requireTenant(database), requireTenantRole('OWNER')],
       },
       async () => ({ ok: true }),
     );
