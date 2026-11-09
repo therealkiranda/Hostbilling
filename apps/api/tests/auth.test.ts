@@ -33,8 +33,8 @@ const transaction = {
   tenantMembership: databaseMock.tenantMembership,
 };
 
-databaseMock.$transaction.mockImplementation(
-  async (callback: (tx: unknown) => Promise<unknown>) => callback(transaction),
+databaseMock.$transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
+  callback(transaction),
 );
 
 const jwtSecret = 'test-secret-with-at-least-32-random-bytes';
