@@ -37,6 +37,11 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm db:generate
 
+      - name: Temporary Prettier diff diagnostic
+        run: |
+          pnpm exec prettier --write apps/api/tests/auth.test.ts
+          git diff -- apps/api/tests/auth.test.ts
+
       - name: Run lint and formatting checks
         run: pnpm check
 
