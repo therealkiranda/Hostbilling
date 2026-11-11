@@ -63,9 +63,9 @@ const listHostingPlansSchema = z.object({
 function omitUndefined<T extends object>(
   value: T,
 ): { [Key in keyof T]?: Exclude<T[Key], undefined> } {
-  return Object.fromEntries(
-    Object.entries(value).filter(([, item]) => item !== undefined),
-  ) as { [Key in keyof T]?: Exclude<T[Key], undefined> };
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as {
+    [Key in keyof T]?: Exclude<T[Key], undefined>;
+  };
 }
 
 export const hostingPlanRoutes: FastifyPluginAsync<HostingPlanPluginOptions> = async (
