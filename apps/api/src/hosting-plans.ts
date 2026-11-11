@@ -11,7 +11,12 @@ const statusSchema = z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']);
 const billingIntervalSchema = z.enum(['MONTH', 'YEAR']);
 
 const editableFields = {
-  slug: z.string().trim().min(3).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  slug: z
+    .string()
+    .trim()
+    .min(3)
+    .max(64)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   name: z.string().trim().min(2).max(120),
   description: z.string().trim().max(5000).nullable(),
   status: statusSchema,
@@ -62,23 +67,27 @@ export const hostingPlanRoutes: FastifyPluginAsync<HostingPlanPluginOptions> = a
   const tenantAccess = [authenticate(db), requireTenant(db)];
   const planManagement = [...tenantAccess, requireTenantRole('OWNER', 'ADMIN')];
 
-  app.get('/tenant/hosting-plans', { preHandler: tenantAccess }, async (request, reply) => {
-    const parsed = listHostingPlansSchema.safeParse(request.query);
+  app.get(
+    '/tenant/hosting-plans',
+    { preHandler: tenantAccess },
+    async (request, reply) => {
+      const parsed = listHostingPlansSchema.safeParse(request.query);
 
-    if (!parsed.success) {
-      return reply.code(400).send({ error: 'Invalid hosting plan filters' });
-    }
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'Invalid hosting plan filters' });
+      }
 
-    const plans = await db.hostingPlan.findMany({
-      where: {
-        tenantId: request.tenantContext!.tenantId,
-        ...(parsed.data.status ? { status: parsed.data.status } : {}),
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+      const plans = await db.hostingPlan.findMany({
+        where: {
+          tenantId: request.tenantContext!.tenantId,
+          ...(parsed.data.status ? { status: parsed.data.status } : {}),
+        },
+        orderBy: { createdAt: 'desc' },
+      });
 
-    return { plans };
-  });
+      return { plans };
+    },
+  );
 
   app.post(
     '/tenant/hosting-plans',
@@ -109,7 +118,9 @@ export const hostingPlanRoutes: FastifyPluginAsync<HostingPlanPluginOptions> = a
           'code' in error &&
           error.code === 'P2002'
         ) {
-          return reply.code(409).send({ error: 'A hosting plan with this slug already exists' });
+          return reply
+            .code(409)
+            .send({ error: 'A hosting plan with this slug already exists' });
         }
 
         throw error;
@@ -156,7 +167,9 @@ export const hostingPlanRoutes: FastifyPluginAsync<HostingPlanPluginOptions> = a
           'code' in error &&
           error.code === 'P2002'
         ) {
-          return reply.code(409).send({ error: 'A hosting plan with this slug already exists' });
+          return reply
+            .code(409)
+            .send({ error: 'A hosting plan with this slug already exists' });
         }
 
         throw error;
