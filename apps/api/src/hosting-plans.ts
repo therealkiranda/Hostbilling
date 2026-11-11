@@ -11,12 +11,7 @@ const statusSchema = z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']);
 const billingIntervalSchema = z.enum(['MONTH', 'YEAR']);
 
 const editableFields = {
-  slug: z
-    .string()
-    .trim()
-    .min(3)
-    .max(64)
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  slug: z.string().trim().min(3).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   name: z.string().trim().min(2).max(120),
   description: z.string().trim().max(5000).nullable(),
   status: statusSchema,
@@ -118,9 +113,7 @@ export const hostingPlanRoutes: FastifyPluginAsync<HostingPlanPluginOptions> = a
           'code' in error &&
           error.code === 'P2002'
         ) {
-          return reply
-            .code(409)
-            .send({ error: 'A hosting plan with this slug already exists' });
+          return reply.code(409).send({ error: 'A hosting plan with this slug already exists' });
         }
 
         throw error;
