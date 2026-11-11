@@ -37,11 +37,6 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm db:generate
 
-      - name: Inspect Prettier output
-        run: |
-          pnpm exec prettier --write apps/api/src/hosting-plans.ts
-          git diff -- apps/api/src/hosting-plans.ts
-
       - name: Run lint and formatting checks
         run: pnpm check
 
