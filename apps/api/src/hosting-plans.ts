@@ -8,8 +8,9 @@ interface HostingPlanPluginOptions {
 }
 
 const statusSchema = z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']);
+const billingIntervalSchema = z.enum(['MONTH', 'YEAR']);
 
-const hostingPlanFields = {
+const editableFields = {
   slug: z.string().trim().min(3).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   name: z.string().trim().min(2).max(120),
   description: z.string().trim().max(5000).nullable(),
@@ -17,7 +18,7 @@ const hostingPlanFields = {
   priceMinorUnits: z.number().int().min(0).max(2_000_000_000),
   setupFeeMinorUnits: z.number().int().min(0).max(2_000_000_000),
   currency: z.string().regex(/^[A-Z]{3}$/),
-  billingInterval: z.enum(['MONTH', 'YEAR']),
+  billingInterval: billingIntervalSchema,
   intervalCount: z.number().int().min(1).max(12),
   diskQuotaMb: z.number().int().min(1).max(2_000_000_000),
   bandwidthQuotaMb: z.number().int().min(0).max(2_000_000_000),
@@ -27,9 +28,25 @@ const hostingPlanFields = {
   maxFtpAccounts: z.number().int().min(0).max(1_000_000),
 };
 
-const createHostingPlanSchema = z.object(hostingPlanFields).strict();
+const createHostingPlanSchema = z
+  .object({
+    ...editableFields,
+    description: editableFields.description.optional(),
+    status: statusSchema.default('DRAFT'),
+    setupFeeMinorUnits: editableFields.setupFeeMinorUnits.default(0),
+    intervalCount: editableFields.intervalCount.default(1),
+    maxDomains: editableFields.maxDomains.default(1),
+    maxEmailAccounts: editableFields.maxEmailAccounts.default(0),
+    maxDatabases: editableFields.maxDatabases.default(0),
+    maxFtpAccounts: editableFields.maxFtpAccounts.default(0),
+  })
+  .strict();
+
 const updateHostingPlanSchema = z
-  .object(hostingPlanFields)
+  .object({
+    ...editableFields,
+    description: editableFields.description.optional(),
+  })
   .partial()
   .strict()
   .refine((value) => Object.keys(value).length > 0, 'At least one field must be provided');
