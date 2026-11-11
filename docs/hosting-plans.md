@@ -4,11 +4,11 @@ Hosting plans belong to a single hosting-company tenant. Every endpoint requires
 
 ## Endpoints
 
-| Method | Endpoint | Access | Purpose |
-| --- | --- | --- | --- |
-| GET | `/tenant/hosting-plans` | Any active tenant member | List plans; optional `?status=DRAFT`, `ACTIVE`, or `ARCHIVED` filter |
-| POST | `/tenant/hosting-plans` | OWNER, ADMIN | Create a plan |
-| PATCH | `/tenant/hosting-plans/:planId` | OWNER, ADMIN | Update a plan belonging to the selected tenant |
+| Method | Endpoint                          | Access                   | Purpose                                           |
+| ------ | --------------------------------- | ------------------------ | ------------------------------------------------- |
+| GET    | `/tenant/hosting-plans`          | Any active tenant member | List plans; optional `?status=DRAFT`, `ACTIVE`, or `ARCHIVED` filter |
+| POST   | `/tenant/hosting-plans`          | OWNER, ADMIN             | Create a plan                                     |
+| PATCH  | `/tenant/hosting-plans/:planId`  | OWNER, ADMIN             | Update a plan belonging to the selected tenant   |
 
 ## Plan fields
 
