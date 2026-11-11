@@ -24,14 +24,26 @@ enum MembershipRole {
   SUPPORT
 }
 
+enum HostingPlanStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum BillingInterval {
+  MONTH
+  YEAR
+}
+
 model Tenant {
-  id          String             @id @default(uuid()) @db.Uuid
-  name        String
-  slug        String             @unique
-  status      TenantStatus       @default(ACTIVE)
-  memberships TenantMembership[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id           String             @id @default(uuid()) @db.Uuid
+  name         String
+  slug         String             @unique
+  status       TenantStatus       @default(ACTIVE)
+  memberships  TenantMembership[]
+  hostingPlans HostingPlan[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
   @@index([status])
 }
@@ -77,4 +89,30 @@ model TenantMembership {
   @@unique([tenantId, userId])
   @@index([userId])
   @@index([tenantId, role])
+}
+
+model HostingPlan {
+  id                 String            @id @default(uuid()) @db.Uuid
+  tenantId           String            @db.Uuid
+  slug               String
+  name               String
+  description        String?           @db.Text
+  status             HostingPlanStatus @default(DRAFT)
+  priceMinorUnits    Int
+  setupFeeMinorUnits Int               @default(0)
+  currency           String            @db.VarChar(3)
+  billingInterval    BillingInterval
+  intervalCount      Int               @default(1)
+  diskQuotaMb        Int
+  bandwidthQuotaMb   Int
+  maxDomains         Int               @default(1)
+  maxEmailAccounts   Int               @default(0)
+  maxDatabases       Int               @default(0)
+  maxFtpAccounts     Int               @default(0)
+  tenant             Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
 }
