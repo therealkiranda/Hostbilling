@@ -4,12 +4,10 @@ Customer records belong to one hosting-company tenant. Every endpoint requires a
 
 ## Endpoints
 
-| Method | Endpoint | Access | Purpose |
-| --- | --- | --- | --- |
-| GET | `/tenant/customers` | Any active tenant member | List, search, filter, and paginate customers |
-| GET | `/tenant/customers/:customerId` | Any active tenant member | Read one customer belonging to the selected tenant |
-| POST | `/tenant/customers` | OWNER or ADMIN | Create a customer |
-| PATCH | `/tenant/customers/:customerId` | OWNER or ADMIN | Update a customer belonging to the selected tenant |
+- **GET `/tenant/customers`** — any active tenant member can list, search, filter, and paginate customers.
+- **GET `/tenant/customers/:customerId`** — any active tenant member can read a customer belonging to the selected tenant.
+- **POST `/tenant/customers`** — OWNER or ADMIN can create a customer.
+- **PATCH `/tenant/customers/:customerId`** — OWNER or ADMIN can update a customer belonging to the selected tenant.
 
 All endpoints require:
 
