@@ -1,0 +1,25 @@
+CREATE TYPE "CustomerStatus" AS ENUM ('ACTIVE', 'INACTIVE');
+
+CREATE TABLE "Customer" (
+    "id" UUID NOT NULL,
+    "tenantId" UUID NOT NULL,
+    "name" TEXT NOT NULL,
+    "email" TEXT,
+    "phone" TEXT,
+    "companyName" TEXT,
+    "notes" TEXT,
+    "status" "CustomerStatus" NOT NULL DEFAULT 'ACTIVE',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Customer_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "Customer_tenantId_email_key" ON "Customer"("tenantId", "email");
+CREATE INDEX "Customer_tenantId_status_createdAt_idx" ON "Customer"("tenantId", "status", "createdAt");
+CREATE INDEX "Customer_tenantId_name_idx" ON "Customer"("tenantId", "name");
+
+ALTER TABLE "Customer"
+    ADD CONSTRAINT "Customer_tenantId_fkey"
+    FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id")
+    ON DELETE RESTRICT ON UPDATE CASCADE;
