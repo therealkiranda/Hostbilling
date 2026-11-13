@@ -40,16 +40,24 @@ enum CustomerStatus {
   INACTIVE
 }
 
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
 model Tenant {
-  id           String             @id @default(uuid()) @db.Uuid
-  name         String
-  slug         String             @unique
-  status       TenantStatus       @default(ACTIVE)
-  memberships  TenantMembership[]
-  hostingPlans HostingPlan[]
-  customers    Customer[]
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  id            String             @id @default(uuid()) @db.Uuid
+  name          String
+  slug          String             @unique
+  status        TenantStatus       @default(ACTIVE)
+  memberships   TenantMembership[]
+  hostingPlans  HostingPlan[]
+  customers     Customer[]
+  subscriptions Subscription[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   @@index([status])
 }
@@ -116,27 +124,59 @@ model HostingPlan {
   maxDatabases       Int               @default(0)
   maxFtpAccounts     Int               @default(0)
   tenant             Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  subscriptions      Subscription[]
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 
   @@unique([tenantId, slug])
+  @@unique([id, tenantId])
   @@index([tenantId, status])
 }
 
 model Customer {
-  id          String         @id @default(uuid()) @db.Uuid
-  tenantId    String         @db.Uuid
-  name        String
-  email       String?
-  phone       String?
-  companyName String?
-  notes       String?        @db.Text
-  status      CustomerStatus @default(ACTIVE)
-  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id            String         @id @default(uuid()) @db.Uuid
+  tenantId      String         @db.Uuid
+  name          String
+  email         String?
+  phone         String?
+  companyName   String?
+  notes         String?        @db.Text
+  status        CustomerStatus @default(ACTIVE)
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  subscriptions Subscription[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@unique([tenantId, email])
+  @@unique([id, tenantId])
   @@index([tenantId, status, createdAt])
   @@index([tenantId, name])
+}
+
+model Subscription {
+  id                 String             @id @default(uuid()) @db.Uuid
+  tenantId           String             @db.Uuid
+  customerId         String             @db.Uuid
+  planId             String             @db.Uuid
+  status             SubscriptionStatus @default(PENDING)
+  priceMinorUnits    Int
+  setupFeeMinorUnits Int
+  currency           String             @db.VarChar(3)
+  billingInterval    BillingInterval
+  intervalCount      Int
+  startedAt          DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  suspendedAt        DateTime?
+  cancelledAt        DateTime?
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  customer           Customer           @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  plan               HostingPlan        @relation(fields: [planId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, customerId])
+  @@index([tenantId, planId])
+  @@index([status, currentPeriodEnd])
 }
