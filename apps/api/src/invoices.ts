@@ -2,12 +2,19 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { PrismaClient } from '@hostbilling/database';
 import { authenticate, requireTenant, requireTenantRole } from './auth.js';
+import {
+  MAX_MINOR_UNITS,
+  buildInvoiceLines,
+  createPeriodInvoice,
+  invoiceInclude,
+  isUniqueConstraintError,
+} from './invoice-issuing.js';
+
+export { formatInvoiceNumber } from './invoice-issuing.js';
 
 interface InvoicePluginOptions {
   db: PrismaClient;
 }
-
-const MAX_MINOR_UNITS = 2_147_483_647;
 
 const statusSchema = z.enum(['OPEN', 'PAID', 'VOID']);
 
@@ -27,21 +34,6 @@ const listInvoicesSchema = z.object({
 
 const subscriptionParamsSchema = z.object({ subscriptionId: z.string().uuid() });
 const invoiceParamsSchema = z.object({ invoiceId: z.string().uuid() });
-
-const invoiceInclude = {
-  lineItems: { orderBy: { createdAt: 'asc' } },
-  customer: { select: { id: true, name: true, email: true } },
-} as const;
-
-function isUniqueConstraintError(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002';
-}
-
-const formatDate = (value: Date): string => value.toISOString().slice(0, 10);
-
-export function formatInvoiceNumber(sequence: number): string {
-  return `INV-${String(sequence).padStart(6, '0')}`;
-}
 
 export const invoiceRoutes: FastifyPluginAsync<InvoicePluginOptions> = async (app, { db }) => {
   const tenantAccess = [authenticate(db), requireTenant(db)];
@@ -129,84 +121,28 @@ export const invoiceRoutes: FastifyPluginAsync<InvoicePluginOptions> = async (ap
         return reply.code(404).send({ error: 'Subscription not found' });
       }
 
-      const { currentPeriodStart, currentPeriodEnd, startedAt } = subscription;
+      const { currentPeriodStart, currentPeriodEnd } = subscription;
 
       if (subscription.status !== 'ACTIVE' || !currentPeriodStart || !currentPeriodEnd) {
         return reply.code(409).send({ error: 'Only active subscriptions can be invoiced' });
       }
 
-      const periodLabel = `${formatDate(currentPeriodStart)} to ${formatDate(currentPeriodEnd)}`;
-      const lineItems = [
-        {
-          description: `${subscription.plan.name} hosting (${periodLabel})`,
-          quantity: 1,
-          unitAmountMinorUnits: subscription.priceMinorUnits,
-          amountMinorUnits: subscription.priceMinorUnits,
-        },
-      ];
-
-      // The one-time setup fee is billed on the invoice for the first period only.
-      if (
-        subscription.setupFeeMinorUnits > 0 &&
-        startedAt &&
-        startedAt.getTime() === currentPeriodStart.getTime()
-      ) {
-        lineItems.push({
-          description: `${subscription.plan.name} setup fee`,
-          quantity: 1,
-          unitAmountMinorUnits: subscription.setupFeeMinorUnits,
-          amountMinorUnits: subscription.setupFeeMinorUnits,
-        });
-      }
-
-      const total = lineItems.reduce((sum, item) => sum + item.amountMinorUnits, 0);
+      const { total } = buildInvoiceLines(subscription, currentPeriodStart, currentPeriodEnd);
 
       if (total > MAX_MINOR_UNITS) {
         return reply.code(422).send({ error: 'Invoice total is too large' });
       }
 
-      const issuedAt = new Date();
-      const dueAt = new Date(issuedAt.getTime() + parsed.data.dueInDays * 24 * 60 * 60 * 1000);
-      // One live invoice per subscription period; voiding frees the key for reissue.
-      const periodKey = `${subscription.id}:${currentPeriodStart.toISOString()}`;
-
       try {
-        const invoice = await db.$transaction(async (transaction) => {
-          const existing = await transaction.invoice.findFirst({
-            where: { tenantId, periodKey },
-            select: { id: true },
-          });
-
-          if (existing) {
-            return null;
-          }
-
-          // The increment is atomic, so concurrent requests never share a number.
-          const { invoiceCounter } = await transaction.tenant.update({
-            where: { id: tenantId },
-            data: { invoiceCounter: { increment: 1 } },
-            select: { invoiceCounter: true },
-          });
-
-          return transaction.invoice.create({
-            data: {
-              tenantId,
-              customerId: subscription.customerId,
-              subscriptionId: subscription.id,
-              number: formatInvoiceNumber(invoiceCounter),
-              currency: subscription.currency,
-              subtotalMinorUnits: total,
-              totalMinorUnits: total,
-              issuedAt,
-              dueAt,
-              periodStart: currentPeriodStart,
-              periodEnd: currentPeriodEnd,
-              periodKey,
-              lineItems: { create: lineItems.map((item) => ({ ...item, tenantId })) },
-            },
-            include: invoiceInclude,
-          });
-        });
+        const invoice = await db.$transaction((transaction) =>
+          createPeriodInvoice(transaction, {
+            tenantId,
+            subscription,
+            periodStart: currentPeriodStart,
+            periodEnd: currentPeriodEnd,
+            dueInDays: parsed.data.dueInDays,
+          }),
+        );
 
         if (!invoice) {
           return reply.code(409).send({ error: 'This billing period has already been invoiced' });

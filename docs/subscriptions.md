@@ -29,7 +29,7 @@ When a subscription is created, the plan's price, setup fee, currency, billing i
 
 ## Billing period
 
-The first activation sets `startedAt`, `currentPeriodStart`, and `currentPeriodEnd`. Month arithmetic is done in UTC and clamps to the last day of the target month, so a period starting on 31 January ends on the last day of February. Reactivating a suspended subscription keeps its existing period. Period renewal belongs to the invoicing milestone.
+The first activation sets `startedAt`, `currentPeriodStart`, and `currentPeriodEnd`. Month arithmetic is done in UTC and clamps to the last day of the target month, so a period starting on 31 January ends on the last day of February. Reactivating a suspended subscription keeps its existing period. The first activation also sets `billedPeriods` to 1. Moving to the next period is covered in [renewals](renewals.md).
 
 ## Rules and isolation
 
