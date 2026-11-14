@@ -53,6 +53,18 @@ enum InvoiceStatus {
   VOID
 }
 
+enum PaymentMethod {
+  BANK_TRANSFER
+  CASH
+  MOBILE_WALLET
+  OTHER
+}
+
+enum PaymentStatus {
+  COMPLETED
+  REVERSED
+}
+
 model Tenant {
   id             String             @id @default(uuid()) @db.Uuid
   name           String
@@ -63,6 +75,7 @@ model Tenant {
   customers      Customer[]
   subscriptions  Subscription[]
   invoices       Invoice[]
+  payments       Payment[]
   invoiceCounter Int                @default(0)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
@@ -153,6 +166,7 @@ model Customer {
   tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   subscriptions Subscription[]
   invoices      Invoice[]
+  payments      Payment[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -213,6 +227,7 @@ model Invoice {
   customer           Customer          @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
   subscription       Subscription      @relation(fields: [subscriptionId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
   lineItems          InvoiceLineItem[]
+  payments           Payment[]
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 
@@ -236,4 +251,32 @@ model InvoiceLineItem {
   createdAt            DateTime @default(now())
 
   @@index([tenantId, invoiceId])
+}
+
+model Payment {
+  id               String        @id @default(uuid()) @db.Uuid
+  tenantId         String        @db.Uuid
+  invoiceId        String        @db.Uuid
+  customerId       String        @db.Uuid
+  method           PaymentMethod
+  status           PaymentStatus @default(COMPLETED)
+  amountMinorUnits Int
+  currency         String        @db.VarChar(3)
+  reference        String?
+  note             String?       @db.Text
+  paidAt           DateTime
+  activeKey        String?
+  recordedByUserId String        @db.Uuid
+  reversedAt       DateTime?
+  reversedByUserId String?       @db.Uuid
+  tenant           Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  invoice          Invoice       @relation(fields: [invoiceId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  customer         Customer      @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@unique([tenantId, activeKey])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, customerId])
 }

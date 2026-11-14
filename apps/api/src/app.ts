@@ -5,6 +5,7 @@ import { authRoutes, requireTenantRole } from './auth.js';
 import { customerRoutes } from './customers.js';
 import { hostingPlanRoutes } from './hosting-plans.js';
 import { invoiceRoutes } from './invoices.js';
+import { paymentRoutes } from './payments.js';
 import { subscriptionRoutes } from './subscriptions.js';
 import { createDatabaseClient, type PrismaClient } from '@hostbilling/database';
 
@@ -40,6 +41,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.register(hostingPlanRoutes, { db });
   app.register(subscriptionRoutes, { db });
   app.register(invoiceRoutes, { db });
+  app.register(paymentRoutes, { db });
   app.register(customerRoutes, { db });
 
   app.get('/health', async () => ({
