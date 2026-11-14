@@ -47,17 +47,25 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
+enum InvoiceStatus {
+  OPEN
+  PAID
+  VOID
+}
+
 model Tenant {
-  id            String             @id @default(uuid()) @db.Uuid
-  name          String
-  slug          String             @unique
-  status        TenantStatus       @default(ACTIVE)
-  memberships   TenantMembership[]
-  hostingPlans  HostingPlan[]
-  customers     Customer[]
-  subscriptions Subscription[]
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id             String             @id @default(uuid()) @db.Uuid
+  name           String
+  slug           String             @unique
+  status         TenantStatus       @default(ACTIVE)
+  memberships    TenantMembership[]
+  hostingPlans   HostingPlan[]
+  customers      Customer[]
+  subscriptions  Subscription[]
+  invoices       Invoice[]
+  invoiceCounter Int                @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   @@index([status])
 }
@@ -144,6 +152,7 @@ model Customer {
   status        CustomerStatus @default(ACTIVE)
   tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   subscriptions Subscription[]
+  invoices      Invoice[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -172,11 +181,59 @@ model Subscription {
   tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   customer           Customer           @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
   plan               HostingPlan        @relation(fields: [planId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  invoices           Invoice[]
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
+  @@unique([id, tenantId])
   @@index([tenantId, status, createdAt])
   @@index([tenantId, customerId])
   @@index([tenantId, planId])
   @@index([status, currentPeriodEnd])
+}
+
+model Invoice {
+  id                 String            @id @default(uuid()) @db.Uuid
+  tenantId           String            @db.Uuid
+  customerId         String            @db.Uuid
+  subscriptionId     String            @db.Uuid
+  number             String
+  status             InvoiceStatus     @default(OPEN)
+  currency           String            @db.VarChar(3)
+  subtotalMinorUnits Int
+  totalMinorUnits    Int
+  issuedAt           DateTime
+  dueAt              DateTime
+  periodStart        DateTime
+  periodEnd          DateTime
+  periodKey          String?
+  paidAt             DateTime?
+  voidedAt           DateTime?
+  tenant             Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  customer           Customer          @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  subscription       Subscription      @relation(fields: [subscriptionId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  lineItems          InvoiceLineItem[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, number])
+  @@unique([tenantId, periodKey])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, customerId])
+  @@index([tenantId, subscriptionId])
+}
+
+model InvoiceLineItem {
+  id                   String   @id @default(uuid()) @db.Uuid
+  tenantId             String   @db.Uuid
+  invoiceId            String   @db.Uuid
+  description          String
+  quantity             Int
+  unitAmountMinorUnits Int
+  amountMinorUnits     Int
+  invoice              Invoice  @relation(fields: [invoiceId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  createdAt            DateTime @default(now())
+
+  @@index([tenantId, invoiceId])
 }
