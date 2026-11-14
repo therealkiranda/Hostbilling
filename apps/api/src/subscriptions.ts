@@ -62,6 +62,7 @@ function transitionData(action: TransitionAction, existing: ExistingSubscription
             status: 'ACTIVE' as const,
             suspendedAt: null,
             startedAt: now,
+            billedPeriods: 1,
             currentPeriodStart: now,
             currentPeriodEnd: addBillingInterval(
               now,
@@ -200,6 +201,7 @@ export const subscriptionRoutes: FastifyPluginAsync<SubscriptionPluginOptions> =
             ? {
                 status: 'ACTIVE' as const,
                 startedAt: now,
+                billedPeriods: 1,
                 currentPeriodStart: now,
                 currentPeriodEnd: addBillingInterval(now, plan.billingInterval, plan.intervalCount),
               }

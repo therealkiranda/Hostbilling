@@ -171,6 +171,7 @@ describe('tenant subscriptions', () => {
     expect(response.statusCode).toBe(201);
     const data = databaseMock.subscription.create.mock.calls[0]![0].data;
     expect(data.status).toBe('ACTIVE');
+    expect(data.billedPeriods).toBe(1);
     expect(data.currentPeriodEnd.getTime()).toBeGreaterThan(data.currentPeriodStart.getTime());
   });
 
@@ -279,6 +280,7 @@ describe('tenant subscriptions', () => {
     const call = databaseMock.subscription.updateMany.mock.calls[0]![0];
     expect(call.where).toEqual({ id: subscriptionId, tenantId, status: 'PENDING' });
     expect(call.data.status).toBe('ACTIVE');
+    expect(call.data.billedPeriods).toBe(1);
     expect(call.data.currentPeriodEnd.getTime()).toBeGreaterThan(
       call.data.currentPeriodStart.getTime(),
     );

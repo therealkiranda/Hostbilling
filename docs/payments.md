@@ -42,4 +42,4 @@ Each payment has an `activeKey` equal to its invoice ID while it is `COMPLETED`,
 
 Payments reference their invoice and customer through foreign keys that include the tenant ID, so a row can never point at another tenant's records. Payments are not hard-deletable. Invoices and customers from another tenant are reported as not found.
 
-Partial payments, refunds, online gateways (eSewa, Khalti), receipts, and renewals are separate milestones.
+Partial payments, refunds, online gateways (eSewa, Khalti), and receipts are separate milestones. A paid invoice is what allows the next period to be renewed; see [renewals](renewals.md).

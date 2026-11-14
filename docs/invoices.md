@@ -29,10 +29,10 @@ A period can have only one non-void invoice. A second request for the same perio
 
 ## Immutability
 
-Invoices have no update endpoint. The only permitted change is `OPEN` to `VOID`, guarded by the current status so concurrent requests cannot both succeed. Voided invoices keep their number and line items for the audit trail. `PAID` exists in the status model for the payments milestone; nothing sets it yet.
+Invoices have no update endpoint. The only permitted change is `OPEN` to `VOID`, guarded by the current status so concurrent requests cannot both succeed. Voided invoices keep their number and line items for the audit trail. Recording a payment sets `PAID`, and reversing that payment returns the invoice to `OPEN`; see [payments](payments.md). A paid invoice cannot be voided.
 
 ## Isolation
 
 Invoices reference their customer and subscription through foreign keys that include the tenant ID, so a row can never point at another tenant's records. Invoices and line items are not hard-deletable.
 
-Payments, renewals that advance the billing period, tax, emails, and HostPanel provisioning are separate milestones.
+Payments are covered in [payments](payments.md) and period renewal in [renewals](renewals.md). Tax, emails, and HostPanel provisioning are separate milestones.
