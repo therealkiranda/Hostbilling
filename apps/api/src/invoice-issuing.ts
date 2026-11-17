@@ -116,7 +116,8 @@ export async function createPeriodInvoice(
       periodStart,
       periodEnd,
       periodKey,
-      lineItems: { create: lineItems.map((item) => ({ ...item, tenantId })) },
+      // tenantId is filled in from the parent invoice by the composite foreign key.
+      lineItems: { create: lineItems },
     },
     include: invoiceInclude,
   });

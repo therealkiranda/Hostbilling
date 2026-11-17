@@ -26,7 +26,9 @@
     "db:migrate:dev": "pnpm --filter @hostbilling/database db:migrate:dev",
     "db:migrate:deploy": "pnpm --filter @hostbilling/database db:migrate:deploy",
     "db:migrate:status": "pnpm --filter @hostbilling/database db:migrate:status",
-    "db:studio": "pnpm --filter @hostbilling/database db:studio"
+    "db:studio": "pnpm --filter @hostbilling/database db:studio",
+    "db:migrate:drift": "pnpm --filter @hostbilling/database db:migrate:drift",
+    "test:integration": "pnpm --filter @hostbilling/api test:integration"
   },
   "devDependencies": {
     "eslint": "^9.25.1",

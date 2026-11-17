@@ -168,8 +168,9 @@ describe('tenant invoices', () => {
       periodKey: `${subscriptionId}:${periodStart.toISOString()}`,
     });
     expect(data.lineItems.create).toHaveLength(2);
+    // Nested creates take tenantId from the parent invoice; passing it is rejected by Prisma.
+    expect(data.lineItems.create[0]).not.toHaveProperty('tenantId');
     expect(data.lineItems.create[0]).toMatchObject({
-      tenantId,
       description: 'Starter hosting (2026-11-13 to 2027-11-13)',
       amountMinorUnits: 125000,
     });

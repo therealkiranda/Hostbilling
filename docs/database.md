@@ -76,3 +76,16 @@ hashing algorithm; `passwordHash` must never contain plaintext credentials.
 The initial schema intentionally does not include products, services, invoices,
 payments, or provisioning records. Those domain models will be introduced in
 separate, reviewable milestones.
+
+## Verifying migrations and real-database behaviour
+
+Most API tests mock Prisma, so CI also has a `database` job with a PostgreSQL
+service. It applies every migration (`pnpm db:migrate:deploy`), fails if the
+result differs from `schema.prisma` (`pnpm db:migrate:drift`), and runs
+`pnpm test:integration`, which drives the real routes through the whole
+lifecycle: sign-up, plan, storefront order, activation, invoice, payment,
+reversal, renewal, and tenant isolation.
+
+To run the integration tests locally, point `DATABASE_URL` at a migrated,
+disposable PostgreSQL database. Each run creates its own uniquely named
+provider, so it does not need an empty database, but never aim it at real data.
