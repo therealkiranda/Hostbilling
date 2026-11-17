@@ -54,3 +54,51 @@ jobs:
 
       - name: Build storefront
         run: pnpm build:storefront
+
+  database:
+    name: Migrations and real-database tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: hostbilling
+          POSTGRES_PASSWORD: hostbilling
+          POSTGRES_DB: hostbilling
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hostbilling"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://hostbilling:hostbilling@localhost:5432/hostbilling?schema=public
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Apply migrations
+        run: pnpm db:migrate:deploy
+
+      - name: Check migrations match schema.prisma
+        run: pnpm db:migrate:drift
+
+      - name: Test the billing lifecycle against PostgreSQL
+        run: pnpm test:integration
