@@ -191,6 +191,7 @@ model Subscription {
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
   billedPeriods      Int                @default(0)
+  domain             String?            @db.VarChar(253)
   suspendedAt        DateTime?
   cancelledAt        DateTime?
   tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)

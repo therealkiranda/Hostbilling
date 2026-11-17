@@ -48,3 +48,9 @@ jobs:
 
       - name: Build API
         run: pnpm build
+
+      - name: Test storefront
+        run: pnpm test:storefront
+
+      - name: Build storefront
+        run: pnpm build:storefront

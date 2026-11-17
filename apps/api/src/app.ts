@@ -1,3 +1,4 @@
+import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance } from 'fastify';
@@ -7,12 +8,15 @@ import { hostingPlanRoutes } from './hosting-plans.js';
 import { invoiceRoutes } from './invoices.js';
 import { paymentRoutes } from './payments.js';
 import { renewalRoutes } from './renewals.js';
+import { storefrontRoutes } from './storefront.js';
 import { subscriptionRoutes } from './subscriptions.js';
 import { createDatabaseClient, type PrismaClient } from '@hostbilling/database';
 
 interface BuildAppOptions {
   db?: PrismaClient;
   jwtSecret?: string;
+  /** Browser origins allowed to call the API. Defaults to the CORS_ORIGINS variable. */
+  corsOrigins?: string[];
 }
 
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
@@ -32,6 +36,20 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.decorateRequest('authContext', null);
   app.decorateRequest('tenantContext', null);
 
+  const corsOrigins =
+    options.corsOrigins ??
+    (process.env.CORS_ORIGINS ?? '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+
+  // Cross-origin browser access is off unless origins are listed explicitly.
+  app.register(cors, {
+    origin: corsOrigins.length > 0 ? corsOrigins : false,
+    methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['authorization', 'content-type', 'x-tenant-id'],
+    maxAge: 600,
+  });
   app.register(jwt, { secret: jwtSecret });
   app.register(rateLimit, {
     global: true,
@@ -44,6 +62,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.register(invoiceRoutes, { db });
   app.register(paymentRoutes, { db });
   app.register(renewalRoutes, { db });
+  app.register(storefrontRoutes, { db });
   app.register(customerRoutes, { db });
 
   app.get('/health', async () => ({
