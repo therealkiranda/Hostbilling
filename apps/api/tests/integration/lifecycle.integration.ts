@@ -1,4 +1,5 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { createDatabaseClient } from '@hostbilling/database';
 import { buildApp } from '../../src/app.js';
@@ -9,6 +10,7 @@ import { buildApp } from '../../src/app.js';
 const db = createDatabaseClient();
 let app: FastifyInstance;
 let counter = 0;
+const panelFetch = vi.fn();
 
 const nextIp = (): string =>
   `10.${Math.floor(counter / 65_536) % 256}.${Math.floor(counter / 256) % 256}.${counter++ % 256}`;
@@ -18,7 +20,7 @@ const nextIp = (): string =>
 type ApiBody = Record<string, any>;
 
 async function call(
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   url: string,
   options: { token?: string; tenantId?: string; body?: unknown } = {},
 ) {
@@ -69,7 +71,15 @@ const planBody = (overrides: Record<string, unknown> = {}) => ({
 });
 
 beforeAll(async () => {
-  app = buildApp({ db, jwtSecret: 'integration-test-secret-integration-test-secret' });
+  app = buildApp({
+    db,
+    jwtSecret: 'integration-test-secret-integration-test-secret',
+    secretsKey: randomBytes(32),
+    panelClientOptions: {
+      fetchImpl: panelFetch as unknown as typeof fetch,
+      resolve: async () => ['203.0.113.10'],
+    },
+  });
   await app.ready();
 });
 
@@ -220,5 +230,96 @@ describe('billing lifecycle against PostgreSQL', () => {
       },
     });
     expect(crossOrder.status).toBe(404);
+  });
+
+  it('keeps a customer website in step with the subscription through HostPanel', async () => {
+    const provider = await registerProvider('panel');
+    const auth = { token: provider.token, tenantId: provider.tenantId };
+    const apiKey = `hpk_12345678_${'b'.repeat(48)}`;
+
+    const plan = await call('POST', '/tenant/hosting-plans', { ...auth, body: planBody() });
+    const placed = await call('POST', `/public/tenants/${provider.slug}/orders`, {
+      body: {
+        planId: plan.body.plan.id,
+        name: 'Gita Rai',
+        email: 'gita@example.com',
+        domain: 'gita-bakery.com.np',
+      },
+    });
+    expect(placed.status).toBe(201);
+    const listed = await call('GET', '/tenant/subscriptions', auth);
+    const subscriptionId = listed.body.subscriptions[0].id as string;
+
+    // The panel answers ping, then provisioning, suspend, unsuspend and terminate.
+    panelFetch.mockImplementation(async (url: string, init: RequestInit) => {
+      const path = new URL(url).pathname;
+      if (path === '/api/v1/ping') return Response.json({ ok: true });
+      if (init.method === 'POST' && path === '/api/v1/services') {
+        return Response.json(
+          { credentials: { panel: { password: 'shown-once' } } },
+          { status: 201 },
+        );
+      }
+      return Response.json({}, { status: init.method === 'DELETE' ? 202 : 200 });
+    });
+
+    const saved = await call('PUT', '/tenant/hostpanel', {
+      ...auth,
+      body: { baseUrl: 'https://panel.example.com', apiKey },
+    });
+    expect(saved.status).toBe(200);
+    expect(JSON.stringify(saved.body)).not.toContain(apiKey);
+
+    const stored = await db.hostPanelConnection.findFirstOrThrow({
+      where: { tenantId: provider.tenantId },
+    });
+    expect(stored.apiKeyCiphertext).not.toContain(apiKey);
+
+    const activated = await call('POST', `/tenant/subscriptions/${subscriptionId}/activate`, auth);
+    expect(activated.status).toBe(200);
+    expect(activated.body.panel).toMatchObject({
+      kind: 'synced',
+      panelState: 'ACTIVE',
+      credentials: { panel: { password: 'shown-once' } },
+    });
+
+    // The database keeps the state, not the credentials.
+    const row = await db.subscription.findFirstOrThrow({ where: { id: subscriptionId } });
+    expect(row.panelState).toBe('ACTIVE');
+    expect(row.panelError).toBeNull();
+    expect(JSON.stringify(row)).not.toContain('shown-once');
+
+    const suspended = await call('POST', `/tenant/subscriptions/${subscriptionId}/suspend`, auth);
+    expect(suspended.body.panel).toMatchObject({ kind: 'synced', panelState: 'SUSPENDED' });
+
+    // A failure is recorded, the status change stands, and a retry finishes the job.
+    panelFetch.mockImplementation(async () =>
+      Response.json(
+        { error: { code: 'busy', message: 'Another task is running' } },
+        { status: 409 },
+      ),
+    );
+    const failed = await call('POST', `/tenant/subscriptions/${subscriptionId}/activate`, auth);
+    expect(failed.status).toBe(200);
+    expect(failed.body.subscription.status).toBe('ACTIVE');
+    expect(failed.body.panel).toMatchObject({ kind: 'failed', panelState: 'SUSPENDED' });
+    expect(
+      (await db.subscription.findFirstOrThrow({ where: { id: subscriptionId } })).panelError,
+    ).toBe('Another task is running');
+
+    panelFetch.mockImplementation(async () => Response.json({}));
+    const retried = await call('POST', `/tenant/subscriptions/${subscriptionId}/panel-sync`, auth);
+    expect(retried.body.panel).toMatchObject({ kind: 'synced', panelState: 'ACTIVE' });
+
+    const cancelled = await call('POST', `/tenant/subscriptions/${subscriptionId}/cancel`, auth);
+    expect(cancelled.body.panel).toMatchObject({ kind: 'synced', panelState: 'TERMINATED' });
+
+    // Another provider cannot see or use this connection.
+    const other = await registerProvider('panel-other');
+    const otherView = await call('GET', '/tenant/hostpanel', {
+      token: other.token,
+      tenantId: other.tenantId,
+    });
+    expect(otherView.body.connection).toBeNull();
   });
 });

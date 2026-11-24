@@ -47,6 +47,13 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
+enum PanelState {
+  NOT_SYNCED
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+}
+
 enum InvoiceStatus {
   OPEN
   PAID
@@ -76,6 +83,7 @@ model Tenant {
   subscriptions  Subscription[]
   invoices       Invoice[]
   payments       Payment[]
+  hostPanel      HostPanelConnection?
   invoiceCounter Int                @default(0)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
@@ -176,6 +184,18 @@ model Customer {
   @@index([tenantId, name])
 }
 
+model HostPanelConnection {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @unique @db.Uuid
+  baseUrl          String   @db.VarChar(300)
+  apiKeyCiphertext String
+  defaultType      String   @default("php") @db.VarChar(16)
+  defaultPhp       String?  @db.VarChar(8)
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
 model Subscription {
   id                 String             @id @default(uuid()) @db.Uuid
   tenantId           String             @db.Uuid
@@ -194,6 +214,9 @@ model Subscription {
   domain             String?            @db.VarChar(253)
   suspendedAt        DateTime?
   cancelledAt        DateTime?
+  panelState         PanelState         @default(NOT_SYNCED)
+  panelSyncedAt      DateTime?
+  panelError         String?            @db.VarChar(500)
   tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   customer           Customer           @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
   plan               HostingPlan        @relation(fields: [planId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)

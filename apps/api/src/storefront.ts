@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { PrismaClient } from '@hostbilling/database';
+import { hostnamePattern } from './hostname.js';
 import { isUniqueConstraintError } from './invoice-issuing.js';
 
 interface StorefrontPluginOptions {
@@ -14,9 +15,6 @@ const tenantParamsSchema = z.object({
     .max(63)
     .regex(/^[a-z0-9-]+$/),
 });
-
-const hostnamePattern =
-  /^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$/;
 
 const optionalText = (max: number) =>
   z

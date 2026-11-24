@@ -15,6 +15,7 @@ const databaseMock = {
   tenantMembership: { findFirst: vi.fn() },
   hostingPlan: { findFirst: vi.fn() },
   customer: { findFirst: vi.fn() },
+  hostPanelConnection: { findFirst: vi.fn() },
   subscription: {
     findMany: vi.fn(),
     findFirst: vi.fn(),
@@ -55,6 +56,7 @@ describe('tenant subscriptions', () => {
     });
     databaseMock.customer.findFirst.mockResolvedValue({ id: customerId, status: 'ACTIVE' });
     databaseMock.hostingPlan.findFirst.mockResolvedValue(activePlan);
+    databaseMock.hostPanelConnection.findFirst.mockResolvedValue(null);
   });
 
   afterAll(async () => {
