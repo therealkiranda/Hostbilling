@@ -3,9 +3,12 @@ import { z } from 'zod';
 import type { PrismaClient } from '@hostbilling/database';
 import { authenticate, requireTenant, requireTenantRole } from './auth.js';
 import { addBillingInterval } from './billing-periods.js';
+import { hostnamePattern } from './hostname.js';
+import { syncSubscriptionToPanel, type PanelDeps, type PanelOutcome } from './panel-sync.js';
 
 interface SubscriptionPluginOptions {
   db: PrismaClient;
+  panel: PanelDeps;
 }
 
 const statusSchema = z.enum(['PENDING', 'ACTIVE', 'SUSPENDED', 'CANCELLED']);
@@ -15,6 +18,7 @@ const createSubscriptionSchema = z
   .object({
     customerId: z.string().uuid(),
     planId: z.string().uuid(),
+    domain: z.string().trim().toLowerCase().regex(hostnamePattern).optional(),
     activate: z.boolean().default(false),
   })
   .strict();
@@ -77,10 +81,17 @@ function transitionData(action: TransitionAction, existing: ExistingSubscription
   }
 }
 
+// Panel details are only included when a panel is connected. Credentials appear here once.
+const panelField = (result: PanelOutcome | null) =>
+  result && result.kind !== 'not-configured' ? { panel: result } : {};
+
 export const subscriptionRoutes: FastifyPluginAsync<SubscriptionPluginOptions> = async (
   app,
-  { db },
+  { db, panel },
 ) => {
+  const reload = (tenantId: string, id: string) =>
+    db.subscription.findFirst({ where: { id, tenantId }, include: subscriptionInclude });
+
   const tenantAccess = [authenticate(db), requireTenant(db)];
   const subscriptionManagement = [...tenantAccess, requireTenantRole('OWNER', 'ADMIN')];
 
@@ -160,7 +171,7 @@ export const subscriptionRoutes: FastifyPluginAsync<SubscriptionPluginOptions> =
       }
 
       const tenantId = request.tenantContext!.tenantId;
-      const { customerId, planId, activate } = parsed.data;
+      const { customerId, planId, domain, activate } = parsed.data;
 
       const [customer, plan] = await Promise.all([
         db.customer.findFirst({ where: { id: customerId, tenantId } }),
@@ -192,6 +203,7 @@ export const subscriptionRoutes: FastifyPluginAsync<SubscriptionPluginOptions> =
           tenantId,
           customerId: customer.id,
           planId: plan.id,
+          ...(domain ? { domain } : {}),
           priceMinorUnits: plan.priceMinorUnits,
           setupFeeMinorUnits: plan.setupFeeMinorUnits,
           currency: plan.currency,
@@ -210,7 +222,15 @@ export const subscriptionRoutes: FastifyPluginAsync<SubscriptionPluginOptions> =
         include: subscriptionInclude,
       });
 
-      return reply.code(201).send({ subscription });
+      // A subscription created already active gets its website straight away.
+      const panelResult = activate
+        ? await syncSubscriptionToPanel(db, panel, tenantId, subscription.id)
+        : null;
+
+      return reply.code(201).send({
+        subscription: await reload(tenantId, subscription.id),
+        ...panelField(panelResult),
+      });
     },
   );
 
@@ -254,12 +274,11 @@ export const subscriptionRoutes: FastifyPluginAsync<SubscriptionPluginOptions> =
           return reply.code(409).send({ error: 'Subscription changed; reload and try again' });
         }
 
-        const subscription = await db.subscription.findFirst({
-          where: { id: subscriptionId, tenantId },
-          include: subscriptionInclude,
-        });
+        // The status change is already saved. A panel failure is reported and recorded on the
+        // subscription for retry; it never undoes or blocks the change.
+        const panelResult = await syncSubscriptionToPanel(db, panel, tenantId, subscriptionId);
 
-        return { subscription };
+        return { subscription: await reload(tenantId, subscriptionId), ...panelField(panelResult) };
       },
     );
   }
