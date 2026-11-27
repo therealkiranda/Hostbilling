@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "panel:smoke": "tsx scripts/panel-smoke.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.1.0",

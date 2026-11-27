@@ -28,7 +28,8 @@
     "db:migrate:status": "pnpm --filter @hostbilling/database db:migrate:status",
     "db:studio": "pnpm --filter @hostbilling/database db:studio",
     "db:migrate:drift": "pnpm --filter @hostbilling/database db:migrate:drift",
-    "test:integration": "pnpm --filter @hostbilling/api test:integration"
+    "test:integration": "pnpm --filter @hostbilling/api test:integration",
+    "panel:smoke": "pnpm --filter @hostbilling/api panel:smoke"
   },
   "devDependencies": {
     "eslint": "^9.25.1",
