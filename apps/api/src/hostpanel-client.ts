@@ -156,6 +156,27 @@ export class HostPanelClient {
     await this.request('GET', '/ping');
   }
 
+  async serverInfo(): Promise<Record<string, unknown>> {
+    return (await this.request('GET', '/server')).data;
+  }
+
+  async service(domain: string): Promise<Record<string, unknown>> {
+    return (await this.request('GET', `/services/${encodeURIComponent(domain)}`)).data;
+  }
+
+  async currentTask(): Promise<{ running: boolean; label: string | null }> {
+    const { data } = await this.request('GET', '/tasks/current');
+    return {
+      running: data.running === true,
+      label: typeof data.label === 'string' ? data.label : null,
+    };
+  }
+
+  /** Removes a client login that has no websites left. */
+  async deleteClient(username: string): Promise<void> {
+    await this.request('DELETE', `/clients/${encodeURIComponent(username)}`);
+  }
+
   async provision(input: {
     domain: string;
     username: string;
